@@ -10,10 +10,10 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.grid_search import GridSearchCV
 from sklearn.preprocessing import StandardScaler, LabelEncoder, Imputer, Normalizer, PolynomialFeatures, RobustScaler
 from sklearn.svm import SVR, LinearSVR
-from sklearn.feature_selection import SelectKBest, f_regression
+from sklearn.feature_selection import SelectKBest, f_regression, VarianceThreshold
 
 logger = logging.getLogger(__file__)
-hdlr = logging.FileHandler('train_poly.log')
+hdlr = logging.FileHandler('train_f_regression.log')
 formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 hdlr.setFormatter(formatter)
 logger.addHandler(hdlr)
@@ -47,7 +47,7 @@ columns = ['Alley', 'BldgType', 'BsmtCond', 'BsmtExposure', 'BsmtFinType1', 'Bsm
 
 for col in list(data):
     if data[col].dtype == np.int64:
-        data[col] = Imputer().fit_transform(data[[col]])
+        data[col] = Imputer().fit_transform(data[col])[0]
     elif data[col].dtype != object:
         data[col] = data[col].mean()
 
@@ -57,15 +57,16 @@ for col in columns:
 
 data = StandardScaler().fit_transform(data)
 data = Normalizer().fit_transform(data)
-data = PolynomialFeatures().fit_transform(data)
+# data = PolynomialFeatures().fit_transform(data)
 print(data.shape)
 data = RobustScaler().fit_transform(data)
+data = VarianceThreshold().fit_transform(data)
 
 tr_X = data[:ntrain]
 te_X = data[ntrain:]
 print(tr_X.shape)
 
-selectkbest = SelectKBest(f_regression)
+selectkbest = SelectKBest(f_regression, k="all")
 tr_X = selectkbest.fit_transform(tr_X, tr_Y)
 te_X = selectkbest.transform(te_X)
 print(tr_X.shape)
@@ -74,7 +75,7 @@ clf = GridSearchCV(linear_model.Ridge(), {
     "solver": ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag'],
     "normalize": [False],
     "alpha": [0.8, 0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88, 0.89, 0.90]
-}, verbose=1, n_jobs=-1, cv=10)
+}, verbose=2, n_jobs=-1, cv=10)
 clf = clf.fit(tr_X, tr_Y)
 logger.warn(clf.best_params_)
 logger.warn(clf.best_estimator_)
@@ -85,11 +86,27 @@ logger.warn(score)
 res = pd.DataFrame({"Id": te_id, "SalePrice": te_y.reshape(te_y.shape[0])})
 res.to_csv("../results/ridge_%s.csv" % time.time(), index=False)
 
+
+clf = GridSearchCV(linear_model.HuberRegressor(), {
+    "epsilon": [1.35, 1.45, 1.5, 1.05, 1.15, 1.25],
+    "max_iter": [100000],
+    "alpha": [0.0001, 0.001, 0.00001, 0.0005, 0.00005, 0.000005]
+}, verbose=2, n_jobs=-1, cv=10)
+clf = clf.fit(tr_X, tr_Y)
+logger.warn(clf.best_params_)
+logger.warn(clf.best_estimator_)
+best_estimator = clf.best_estimator_
+score = best_estimator.score(tr_X, tr_Y)
+te_y = np.expm1(best_estimator.predict(te_X))
+logger.warn(score)
+res = pd.DataFrame({"Id": te_id, "SalePrice": te_y.reshape(te_y.shape[0])})
+res.to_csv("../results/huber_%s.csv" % time.time(), index=False)
+
 clf = GridSearchCV(ensemble.AdaBoostRegressor(), {
     "n_estimators": [50, 100, 500, 1000],
     "learning_rate": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     "loss": ['linear', 'square', 'exponential']
-}, verbose=1, n_jobs=-1, cv=10)
+}, verbose=2, n_jobs=-1, cv=10)
 clf = clf.fit(tr_X, tr_Y)
 logger.warn(clf.best_params_)
 logger.warn(clf.best_estimator_)
@@ -100,28 +117,10 @@ logger.warn(score)
 res = pd.DataFrame({"Id": te_id, "SalePrice": te_y.reshape(te_y.shape[0])})
 res.to_csv("../results/ada_boost_%s.csv" % time.time(), index=False)
 
-clf = GridSearchCV(ensemble.GradientBoostingRegressor(), {
-    "n_estimators": [50, 100, 500, 1000],
-    "loss": ["ls", "lad", "huber", "quantile"],
-    "learning_rate": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
-    "max_depth": [1, 2, 3, 4],
-    "criterion": ['mae', 'mse', 'friedman_mse']
-}, verbose=1, n_jobs=-1, cv=10)
-clf = clf.fit(tr_X, tr_Y)
-logger.warn(clf.best_params_)
-logger.warn(clf.best_estimator_)
-best_estimator = clf.best_estimator_
-score = best_estimator.score(tr_X, tr_Y)
-te_y = np.expm1(best_estimator.predict(te_X))
-logger.warn(score)
-res = pd.DataFrame({"Id": te_id, "SalePrice": te_y.reshape(te_y.shape[0])})
-res.to_csv("../results/gradient_boosting_%s.csv" % time.time(), index=False)
-
-clf = GridSearchCV(SVR(), {
-    "kernel": ["linear", "poly", "rbf", "sigmoid"],
-    "C": [1e3, 1e4, 1e5, 1e2, 1],
-    "epsilon": [0.1, 0.2, 0.3, 0.4, 0.01, 0.05, 0.001],
-    "degree": [1, 2, 3, 4, 5]
+clf = GridSearchCV(linear_model.ElasticNet(), {
+    "l1_ratio": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+    "selection": ["random", "cyclic"],
+    "alpha": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.3, 1.5]
 }, verbose=2, n_jobs=-1, cv=10)
 clf = clf.fit(tr_X, tr_Y)
 logger.warn(clf.best_params_)
@@ -131,7 +130,7 @@ score = best_estimator.score(tr_X, tr_Y)
 te_y = np.expm1(best_estimator.predict(te_X))
 logger.warn(score)
 res = pd.DataFrame({"Id": te_id, "SalePrice": te_y.reshape(te_y.shape[0])})
-res.to_csv("../results/svr_%s.csv" % time.time(), index=False)
+res.to_csv("../results/elasticnet_%s.csv" % time.time(), index=False)
 
 clf = GridSearchCV(RandomForestRegressor(random_state=9), {
     "max_depth": [i for i in range(1, 16, 1)]
@@ -160,11 +159,13 @@ logger.warn(score)
 res = pd.DataFrame({"Id": te_id, "SalePrice": te_y.reshape(te_y.shape[0])})
 res.to_csv("../results/linear_svr_%s.csv" % time.time(), index=False)
 
-clf = GridSearchCV(linear_model.ElasticNet(), {
-    "l1_ratio": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
-    "selection": ["random", "cyclic"],
-    "alpha": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.3, 1.5]
-}, verbose=1, n_jobs=-1, cv=10)
+clf = GridSearchCV(SVR(), {
+    "kernel": ["linear", "poly", "rbf", "sigmoid"],
+    "C": [1e3, 1e4, 1e5, 1e2, 1],
+    "epsilon": [0.1, 0.2, 0.3, 0.4, 0.01, 0.05, 0.001],
+    "degree": [1, 2, 3, 4, 5],
+    "cache_size": [100000]
+}, verbose=2, n_jobs=-1, cv=10)
 clf = clf.fit(tr_X, tr_Y)
 logger.warn(clf.best_params_)
 logger.warn(clf.best_estimator_)
@@ -173,4 +174,21 @@ score = best_estimator.score(tr_X, tr_Y)
 te_y = np.expm1(best_estimator.predict(te_X))
 logger.warn(score)
 res = pd.DataFrame({"Id": te_id, "SalePrice": te_y.reshape(te_y.shape[0])})
-res.to_csv("../results/elasticnet_%s.csv" % time.time(), index=False)
+res.to_csv("../results/svr_%s.csv" % time.time(), index=False)
+
+clf = GridSearchCV(ensemble.GradientBoostingRegressor(), {
+    "n_estimators": [50, 100, 500, 1000],
+    "loss": ["ls", "lad", "huber", "quantile"],
+    "learning_rate": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+    "max_depth": [1, 2, 3, 4],
+    "criterion": ['mae', 'mse', 'friedman_mse']
+}, verbose=2, n_jobs=-1, cv=10)
+clf = clf.fit(tr_X, tr_Y)
+logger.warn(clf.best_params_)
+logger.warn(clf.best_estimator_)
+best_estimator = clf.best_estimator_
+score = best_estimator.score(tr_X, tr_Y)
+te_y = np.expm1(best_estimator.predict(te_X))
+logger.warn(score)
+res = pd.DataFrame({"Id": te_id, "SalePrice": te_y.reshape(te_y.shape[0])})
+res.to_csv("../results/gradient_boosting_%s.csv" % time.time(), index=False)

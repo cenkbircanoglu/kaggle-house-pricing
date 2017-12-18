@@ -97,3 +97,4 @@ ENV/
 
 /results/
 .idea
+!/algo/dnn.log

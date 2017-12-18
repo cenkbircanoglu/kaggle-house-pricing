@@ -4,20 +4,23 @@ from sklearn.ensemble import IsolationForest
 
 sys.path.insert(0, '../')
 from rmsle import rmsle
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
 
-from keras import backend as K
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
 from keras.models import Sequential
-from keras.layers import Dense, BatchNormalization, Dropout
+from keras.layers import Dense, Dropout
 from keras import callbacks
 import logging
 import time
 
-from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_regression
-from sklearn.model_selection import StratifiedKFold
+from sklearn.feature_selection import VarianceThreshold
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler, Imputer, Normalizer, RobustScaler, LabelEncoder
+from sklearn.preprocessing import Imputer, Normalizer, LabelEncoder
 
 logger = logging.getLogger(__file__)
 hdlr = logging.FileHandler('dnn.log')
@@ -98,106 +101,99 @@ for c in cols:
 print('Shape all_data: {}'.format(data.shape))
 
 
-# 0.15032, batch size 8
-# 0.20477, batch size 1
-def model1(shape):
-    # create model
-    model = Sequential(name="model1")
-    model.add(Dense(256, input_dim=shape, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(64, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(16, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(1, kernel_initializer='normal'))
+def single_layer_perceptron(shape):
+    model = Sequential(name="slp")
+    model.add(Dense(1, input_dim=shape))
     # Compile model
-    model.compile(loss='mean_squared_logarithmic_error', optimizer='adam')
-    return model
+    model.compile(loss='mse', optimizer='adam')
+    return model, "None"
 
 
-def model2(shape):
+def mlp1(shape, activation):
     # create model
-    model = Sequential(name="model2")
-    model.add(Dense(256, input_dim=shape, kernel_initializer='normal'))
-    model.add(Dense(64, kernel_initializer='normal'))
-    model.add(Dense(16, kernel_initializer='normal'))
-    model.add(Dense(1, kernel_initializer='normal'))
+    model = Sequential(name="mlp1%s" % activation)
+    model.add(Dense(64, input_dim=shape, activation=activation))
+    model.add(Dense(1))
     # Compile model
-    model.compile(loss='mse', optimizer='rmsprop')
-    return model
+    model.compile(loss='mse', optimizer='adam')
+    return model, activation
 
 
-def model3(shape):
-    model = Sequential(name="model3")
-    model.add(Dense(1028, input_dim=shape, activation='relu'))
-    model.add(BatchNormalization())
+def mlp2(shape, activation):
+    # create model
+    model = Sequential(name="mlp2%s" % activation)
+    model.add(Dense(1024, input_dim=shape, activation=activation))
+    model.add(Dense(1))
+    # Compile model
+    model.compile(loss='mse', optimizer='adam')
+    return model, activation
+
+
+def mlp3(shape, activation):
+    # create model
+    model = Sequential(name="mlp3%s" % activation)
+    model.add(Dense(64, input_dim=shape, activation=activation))
+    model.add(Dense(32, activation=activation))
+    model.add(Dense(16, activation=activation))
+    model.add(Dense(1, ))
+    # Compile model
+    model.compile(loss='mse', optimizer='adam')
+    return model, activation
+
+
+def mlp4(shape, activation):
+    # create model
+    model = Sequential(name="mlp4%s" % activation)
+    model.add(Dense(1024, input_dim=shape, activation=activation))
+    model.add(Dense(256, activation=activation))
+    model.add(Dense(64, activation=activation))
+    model.add(Dense(1))
+    # Compile model
+    model.compile(loss='mse', optimizer='adam')
+    return model, activation
+
+
+def mlp5(shape, activation):
+    model = Sequential(name="mlp5%s" % activation)
+    model.add(Dense(64, input_dim=shape, activation=activation))
     model.add(Dropout(0.5))
-    model.add(Dense(100, activation='relu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.8))
-    model.add(Dense(50))
-    model.add(BatchNormalization())
+    model.add(Dense(32, activation=activation))
+    model.add(Dropout(0.5))
+    model.add(Dense(16, activation=activation))
+    model.add(Dropout(0.5))
     model.add(Dense(1))
+    # Compile model
     model.compile(loss='mse', optimizer='adam')
-    return model
+    return model, activation
 
 
-def model4(shape):
-    model = Sequential(name="model4")
-    model.add(Dense(1028, input_dim=shape, activation='relu'))
-    model.add(Dense(100, activation='relu'))
-    model.add(Dropout(0.8))
-    model.add(Dense(50))
+def mlp6(shape, activation):
+    model = Sequential(name="mlp6%s" % activation)
+    model.add(Dense(1024, input_dim=shape, activation=activation))
+    model.add(Dropout(0.5))
+    model.add(Dense(256, activation=activation))
+    model.add(Dropout(0.5))
+    model.add(Dense(64, activation=activation))
+    model.add(Dropout(0.5))
     model.add(Dense(1))
+    # Compile model
     model.compile(loss='mse', optimizer='adam')
-    return model
+    return model, activation
 
 
-def model5(shape):
-    model = Sequential(name="model5")
-    model.add(Dense(1028, input_dim=shape, activation='relu'))
-    model.add(Dense(100, activation='relu'))
-    model.add(Dense(1))
-    model.compile(loss='mse', optimizer='adam')
-    return model
-
-
-def model6(shape):
-    model = Sequential(name="model6")
-    model.add(Dense(32, input_dim=shape, activation='relu'))
-    model.add(Dense(1))
-    model.compile(loss='mse', optimizer='adam')
-    return model
-
-
-def model7(shape):
-    model = Sequential(name="model7")
-    model.add(Dense(512, input_dim=shape, activation='relu'))
-    model.add(Dense(256, activation='relu'))
-    model.add(Dropout(0.8))
-    model.add(Dense(64, activation='relu'))
-    model.add(Dropout(0.8))
-    model.add(Dense(32, activation='relu'))
-    model.add(Dropout(0.8))
-    model.add(Dense(1))
-    model.compile(loss='mse', optimizer='adam')
-    return model
-
-
-def get_best_model(model, X, Y, train_indices, test_indeces):
-    tr_x = X[train_indices]
-    tr_y = Y[train_indices]
-    te_x = X[test_indeces]
-    te_y = Y[test_indeces]
-    best_weights_filepath = 'weigths/best_weights_%s.hdf5' % (model.name)
+def get_best_model(model, X, Y, activation):
+    best_weights_filepath = 'weigths/best_weights_%s_%s.hdf5' % (model.name, activation)
     earlyStopping = callbacks.EarlyStopping(monitor='val_loss', patience=1000, verbose=0,
                                             mode='auto')
     saveBestModel = callbacks.ModelCheckpoint(best_weights_filepath, monitor='val_loss',
                                               verbose=0,
                                               save_best_only=True, mode='auto')
     # train model
-    tensorboard = callbacks.TensorBoard(log_dir='./Graph/%s' % (model.name), histogram_freq=0,
+    tensorboard = callbacks.TensorBoard(log_dir='./Graph/%s_%s' % (model.name, activation), histogram_freq=0,
                                         write_graph=True, write_images=True)
 
-    history = model.fit(tr_x, tr_y, batch_size=1, epochs=7500,
-                        verbose=1, validation_data=(te_x, te_y), callbacks=[
+    history = model.fit(X, Y, batch_size=8, epochs=7500,
+                        verbose=0, validation_split=0.1, callbacks=[
             earlyStopping,
             saveBestModel,
             tensorboard
@@ -211,12 +207,9 @@ def get_best_model(model, X, Y, train_indices, test_indeces):
 logger.info(data.shape)
 data = pd.get_dummies(data)
 logger.info(data.shape)
-data = StandardScaler().fit_transform(data)
-data = Normalizer().fit_transform(data)
-# data = PolynomialFeatures().fit_transform(data)
-logger.info(data.shape)
-data = RobustScaler().fit_transform(data)
 data = VarianceThreshold().fit_transform(data)
+data = Normalizer().fit_transform(data)
+logger.info(data.shape)
 logger.info(data.shape)
 
 tr_X = data[:ntrain]
@@ -231,27 +224,43 @@ tr_X = tr_X[outlier_df[outlier_df['outlier'] == 1].index.values].astype(np.float
 tr_Y = tr_Y.values[outlier_df[outlier_df['outlier'] == 1].index.values].astype(np.float64)
 
 logger.info((tr_X.shape, tr_Y.shape))
-n_folds = 10
-kfold = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=8)
 models = [
-    model1(tr_X.shape[1]),
-    model2(tr_X.shape[1]),
-    model3(tr_X.shape[1]),
-    model4(tr_X.shape[1]),
-    model5(tr_X.shape[1]),
-    model6(tr_X.shape[1]),
-    model7(tr_X.shape[1])
+    # single_layer_perceptron(tr_X.shape[1]),
+    # mlp1(tr_X.shape[1], "linear"),
+    # mlp1(tr_X.shape[1], "tanh"),
+    # mlp1(tr_X.shape[1], "relu"),
+    # mlp1(tr_X.shape[1], "selu")
+    # mlp2(tr_X.shape[1], "linear"),
+    # mlp2(tr_X.shape[1], "tanh"),
+    # mlp2(tr_X.shape[1], "relu"),
+    # mlp2(tr_X.shape[1], "selu")
+    # mlp3(tr_X.shape[1], "linear"),
+    # mlp3(tr_X.shape[1], "tanh"),
+    # mlp3(tr_X.shape[1], "relu"),
+    # mlp3(tr_X.shape[1], "selu")
+    # mlp4(tr_X.shape[1], "linear"),
+    # mlp4(tr_X.shape[1], "tanh"),
+    # mlp4(tr_X.shape[1], "relu"),
+    # mlp4(tr_X.shape[1], "selu")
+    # mlp5(tr_X.shape[1], "linear"),
+    # mlp5(tr_X.shape[1], "tanh"),
+    # mlp5(tr_X.shape[1], "relu"),
+    # mlp5(tr_X.shape[1], "selu")
+    # mlp6(tr_X.shape[1], "linear"),
+    # mlp6(tr_X.shape[1], "tanh"),
+    # mlp6(tr_X.shape[1], "relu")
+    # mlp6(tr_X.shape[1], "selu")
 ]
-for dnn_model in models:
-    with open('dnn_report.txt', 'a') as fh:
+for dnn_model, activation in models:
+    with open('dnn_report_%s_%s.txt' % (dnn_model.name, activation), 'a') as fh:
         # Pass the file handle in as a lambda function to make it callable
-        dnn_model.summary(print_fn=lambda x: fh.write(x + '\n'))
-    best_model = dnn_model
-    for train, test in kfold.split(tr_X, tr_Y):
-        best_model = get_best_model(best_model, tr_X, tr_Y, train, test)
-    score = best_model.evaluate(tr_X, tr_Y)
-    cv_score = rmsle(tr_Y, best_model.predict(tr_X))
-    logger.info("CV, %s, %s" % (best_model.name, str(cv_score.mean())))
-    te_y = np.expm1(best_model.predict(te_X))
+        fh.write("%s_%s\n" % (dnn_model.name, activation))
+        dnn_model.summary(print_fn=lambda x: fh.write(x + "\n"))
+    dnn_model = get_best_model(dnn_model, tr_X, tr_Y, activation)
+    score_tr = dnn_model.evaluate(tr_X, tr_Y)
+    logger.info("Tr, %s, %s, %s" % (dnn_model.name, activation, str(score_tr)))
+    cv_score = rmsle(tr_Y, dnn_model.predict(tr_X))
+    logger.info("CV, %s, %s, %s" % (dnn_model.name, activation, str(cv_score.mean())))
+    te_y = np.expm1(dnn_model.predict(te_X))
     res = pd.DataFrame({"Id": te_id, "SalePrice": te_y.reshape(te_y.shape[0])})
-    res.to_csv("../results/dnn_%s_%s.csv" % (best_model.name, time.time()), index=False)
+    res.to_csv("../dnn_results/dnn_%s_%s_%s.csv" % (dnn_model.name, activation, time.time()), index=False)

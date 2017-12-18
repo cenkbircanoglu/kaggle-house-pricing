@@ -111,12 +111,12 @@ te_df = dummy_data[ntrain:]
 
 tr_X = tr_df.values
 te_X = te_df.values
-
+print(tr_X.shape)
 clf = GridSearchCV(linear_model.HuberRegressor(), {
     "epsilon": [1.35, 1.45, 1.5, 1.05, 1.15, 1.25],
     "max_iter": [100000],
     "alpha": [0.0001, 0.001, 0.00001, 0.0005, 0.00005, 0.000005]
-}, verbose=2, n_jobs=2)
+}, verbose=2, n_jobs=-1)
 clf = clf.fit(tr_X, tr_y)
 te_y = np.expm1(clf.predict(te_X))
 

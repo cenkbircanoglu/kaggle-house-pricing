@@ -98,3 +98,13 @@ ENV/
 /results/
 .idea
 !/algo/dnn.log
+/xgboost/
+/results_default/
+/old_results/
+/ensemble/
+/algo/weigths/
+/algo/Graph/
+/algo/weigths_20/
+/algo/Graph_models/
+/algo/Graph_20/
+/algo/plot/

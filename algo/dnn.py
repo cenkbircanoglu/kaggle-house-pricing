@@ -5,7 +5,10 @@ from sklearn.ensemble import IsolationForest
 sys.path.insert(0, '../')
 from rmsle import rmsle
 import tensorflow as tf
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0f4544bb07472f1398d92f6cf8061f0982787f24
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -84,7 +87,7 @@ for col in list(data):
         data.drop([col], axis=1, inplace=True)
     else:
         if data[col].dtype == np.int64:
-            data[col] = Imputer().fit_transform(data[col])[0]
+            data[col] = Imputer().fit_transform(data[[col]])
         elif data[col].dtype != object:
             data[col] = data[col].mean()
 
@@ -101,83 +104,109 @@ for c in cols:
 print('Shape all_data: {}'.format(data.shape))
 
 
-def single_layer_perceptron(shape):
-    model = Sequential(name="slp")
-    model.add(Dense(1, input_dim=shape))
-    # Compile model
-    model.compile(loss='mse', optimizer='adam')
-    return model, "None"
+# def single_layer_perceptron(shape):
+#     model = Sequential(name="slp")
+#     model.add(Dense(1, input_dim=shape))
+#     # Compile model
+#     model.compile(loss='mse', optimizer='adam')
+#     return model, "None"
+#
+#
+# def mlp1(shape, activation):
+#     # create model
+#     model = Sequential(name="mlp1%s" % activation)
+#     model.add(Dense(64, input_dim=shape, activation=activation))
+#     model.add(Dense(1))
+#     # Compile model
+#     model.compile(loss='mse', optimizer='adam')
+#     return model, activation
+#
+#
+# def mlp2(shape, activation):
+#     # create model
+#     model = Sequential(name="mlp2%s" % activation)
+#     model.add(Dense(1024, input_dim=shape, activation=activation))
+#     model.add(Dense(1))
+#     # Compile model
+#     model.compile(loss='mse', optimizer='adam')
+#     return model, activation
+#
+#
+# def mlp3(shape, activation):
+#     # create model
+#     model = Sequential(name="mlp3%s" % activation)
+#     model.add(Dense(64, input_dim=shape, activation=activation))
+#     model.add(Dense(32, activation=activation))
+#     model.add(Dense(16, activation=activation))
+#     model.add(Dense(1, ))
+#     # Compile model
+#     model.compile(loss='mse', optimizer='adam')
+#     return model, activation
+#
+#
+# def mlp4(shape, activation):
+#     # create model
+#     model = Sequential(name="mlp4%s" % activation)
+#     model.add(Dense(1024, input_dim=shape, activation=activation))
+#     model.add(Dense(256, activation=activation))
+#     model.add(Dense(64, activation=activation))
+#     model.add(Dense(1))
+#     # Compile model
+#     model.compile(loss='mse', optimizer='adam')
+#     return model, activation
+#
+#
+# def mlp5(shape, activation):
+#     model = Sequential(name="mlp5%s" % activation)
+#     model.add(Dense(64, input_dim=shape, activation=activation))
+#     model.add(Dropout(0.5))
+#     model.add(Dense(32, activation=activation))
+#     model.add(Dropout(0.5))
+#     model.add(Dense(16, activation=activation))
+#     model.add(Dropout(0.5))
+#     model.add(Dense(1))
+#     # Compile model
+#     model.compile(loss='mse', optimizer='adam')
+#     return model, activation
+#
+#
+# def mlp6(shape, activation):
+#     model = Sequential(name="mlp6%s" % activation)
+#     model.add(Dense(1024, input_dim=shape, activation=activation))
+#     model.add(Dropout(0.5))
+#     model.add(Dense(256, activation=activation))
+#     model.add(Dropout(0.5))
+#     model.add(Dense(64, activation=activation))
+#     model.add(Dropout(0.5))
+#     model.add(Dense(1))
+#     # Compile model
+#     model.compile(loss='mse', optimizer='adam')
+#     return model, activation
+
+from keras import backend as K
+def root_mean_squared_error(y_true, y_pred):
+    return K.sqrt(K.mean(K.square(y_pred - y_true), axis=-1))
 
 
-def mlp1(shape, activation):
-    # create model
-    model = Sequential(name="mlp1%s" % activation)
-    model.add(Dense(64, input_dim=shape, activation=activation))
-    model.add(Dense(1))
-    # Compile model
-    model.compile(loss='mse', optimizer='adam')
-    return model, activation
-
-
-def mlp2(shape, activation):
-    # create model
-    model = Sequential(name="mlp2%s" % activation)
-    model.add(Dense(1024, input_dim=shape, activation=activation))
-    model.add(Dense(1))
-    # Compile model
-    model.compile(loss='mse', optimizer='adam')
-    return model, activation
-
-
-def mlp3(shape, activation):
-    # create model
-    model = Sequential(name="mlp3%s" % activation)
-    model.add(Dense(64, input_dim=shape, activation=activation))
-    model.add(Dense(32, activation=activation))
-    model.add(Dense(16, activation=activation))
-    model.add(Dense(1, ))
-    # Compile model
-    model.compile(loss='mse', optimizer='adam')
-    return model, activation
-
-
-def mlp4(shape, activation):
-    # create model
-    model = Sequential(name="mlp4%s" % activation)
-    model.add(Dense(1024, input_dim=shape, activation=activation))
-    model.add(Dense(256, activation=activation))
-    model.add(Dense(64, activation=activation))
-    model.add(Dense(1))
-    # Compile model
-    model.compile(loss='mse', optimizer='adam')
-    return model, activation
-
-
-def mlp5(shape, activation):
-    model = Sequential(name="mlp5%s" % activation)
-    model.add(Dense(64, input_dim=shape, activation=activation))
-    model.add(Dropout(0.5))
-    model.add(Dense(32, activation=activation))
-    model.add(Dropout(0.5))
-    model.add(Dense(16, activation=activation))
-    model.add(Dropout(0.5))
-    model.add(Dense(1))
-    # Compile model
-    model.compile(loss='mse', optimizer='adam')
-    return model, activation
-
-
-def mlp6(shape, activation):
+def mlp7(shape, activation):
     model = Sequential(name="mlp6%s" % activation)
-    model.add(Dense(1024, input_dim=shape, activation=activation))
+    model.add(Dense(2048, input_dim=shape, activation=activation))
+    model.add(Dropout(0.5))
+    model.add(Dense(1024, activation=activation))
+    model.add(Dropout(0.5))
+    model.add(Dense(512, activation=activation))
     model.add(Dropout(0.5))
     model.add(Dense(256, activation=activation))
     model.add(Dropout(0.5))
     model.add(Dense(64, activation=activation))
     model.add(Dropout(0.5))
+    model.add(Dense(32, activation=activation))
+    model.add(Dropout(0.5))
+    model.add(Dense(16, activation=activation))
+    model.add(Dropout(0.5))
     model.add(Dense(1))
     # Compile model
-    model.compile(loss='mse', optimizer='adam')
+    model.compile(loss="mse", optimizer='adam')
     return model, activation
 
 def mlp7(shape, activation):
@@ -210,7 +239,7 @@ def get_best_model(model, X, Y, activation):
                                         write_graph=True, write_images=True)
 
     history = model.fit(X, Y, batch_size=8, epochs=7500,
-                        verbose=0, validation_split=0.1, callbacks=[
+                        verbose=1, validation_split=0.1, callbacks=[
             earlyStopping,
             saveBestModel,
             tensorboard
@@ -267,6 +296,7 @@ models = [
     # mlp6(tr_X.shape[1], "tanh"),
     # mlp6(tr_X.shape[1], "relu")
     # mlp6(tr_X.shape[1], "selu")
+
     mlp7(tr_X.shape[1], "linear"),
     mlp7(tr_X.shape[1], "tanh"),
     mlp7(tr_X.shape[1], "relu"),

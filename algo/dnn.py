@@ -5,7 +5,7 @@ from sklearn.ensemble import IsolationForest
 sys.path.insert(0, '../')
 from rmsle import rmsle
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
+
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -180,6 +180,23 @@ def mlp6(shape, activation):
     model.compile(loss='mse', optimizer='adam')
     return model, activation
 
+def mlp7(shape, activation):
+    model = Sequential(name="mlp7%s" % activation)
+    model.add(Dense(2048, input_dim=shape, activation=activation))
+    model.add(Dense(1024, activation=activation))
+    model.add(Dense(512, activation=activation))
+    model.add(Dense(256, activation=activation))
+    model.add(Dropout(0.5))
+    model.add(Dense(128, activation=activation))
+    model.add(Dense(64, activation=activation))
+    model.add(Dense(32, activation=activation))
+    model.add(Dropout(0.5))
+    model.add(Dense(1))
+    # Compile model
+    model.compile(loss='mse', optimizer='adam')
+    return model, activation
+
+
 
 def get_best_model(model, X, Y, activation):
     best_weights_filepath = 'weigths/best_weights_%s_%s.hdf5' % (model.name, activation)
@@ -250,6 +267,10 @@ models = [
     # mlp6(tr_X.shape[1], "tanh"),
     # mlp6(tr_X.shape[1], "relu")
     # mlp6(tr_X.shape[1], "selu")
+    mlp7(tr_X.shape[1], "linear"),
+    mlp7(tr_X.shape[1], "tanh"),
+    mlp7(tr_X.shape[1], "relu"),
+    mlp7(tr_X.shape[1], "selu")
 ]
 for dnn_model, activation in models:
     with open('dnn_report_%s_%s.txt' % (dnn_model.name, activation), 'a') as fh:
